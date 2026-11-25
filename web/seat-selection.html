@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Select Seats — CINEPHILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="/index.html" class="brand-mark">
+        <span class="brand-word">Cinephile</span>
+      </a>
+      <div id="nav-actions" class="nav-actions"></div>
+    </div>
+  </header>
+
+  <main class="container page-shell">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">SELECT YOUR SEATS</div>
+        <h1 id="show-title" class="section-title" style="font-style:italic;">Loading Show...</h1>
+        <p id="show-venue" class="poster-specs" style="margin-block-start:0.35rem;"></p>
+      </div>
+      <span id="show-time-chip" class="chip gold"></span>
+    </div>
+
+    <div class="seat-layout">
+      <div class="editorial-panel">
+        <div class="screen-arc"></div>
+        <div class="screen-caption">ALL EYES THIS WAY &bull; SCREEN</div>
+        <div id="seat-grid" class="seat-grid-rows">
+          <p class="poster-specs">Loading seats...</p>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="swatch" style="background:#171920;"></div><span>Regular</span></div>
+          <div class="legend-item"><div class="swatch" style="background:rgba(139,92,246,0.18); border-color:rgba(167,139,250,0.7);"></div><span>Premium</span></div>
+          <div class="legend-item"><div class="swatch" style="background:rgba(212,175,55,0.2); border-color:var(--gold);"></div><span>VIP</span></div>
+          <div class="legend-item"><div class="swatch" style="background:var(--gold); border-color:var(--gold);"></div><span>Selected</span></div>
+          <div class="legend-item"><div class="swatch" style="opacity:0.3; border-style:dashed;"></div><span>Booked</span></div>
+        </div>
+      </div>
+
+      <aside class="editorial-panel" style="position:sticky; inset-block-start:5.5rem;">
+        <h2 style="font-family:var(--font-serif); font-size:1.6rem; margin-block-end:0.75rem;">Booking Summary</h2>
+
+        <div class="poster-specs" style="margin-block-end:0.4rem;">Selected Seats</div>
+        <div id="selected-seats-box" style="min-block-size:2.4rem; display:flex; flex-wrap:wrap; gap:0.4rem; margin-block-end:1rem;">
+          <span style="color:var(--dim); font-size:0.85rem;">Click seats on the grid</span>
+        </div>
+
+        <div class="form-group">
+          <label for="payment-method">Payment Method</label>
+          <select id="payment-method" class="form-control">
+            <option value="UPI">UPI</option>
+            <option value="CARD">Card (Debit / Credit)</option>
+            <option value="CASH">Box Office Cash</option>
+          </select>
+        </div>
+
+        <div class="ticket-stub-divider"></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-block-end:1.1rem;">
+          <span class="poster-specs">Total</span>
+          <span id="total-amount" style="font-family:var(--font-serif); font-size:1.9rem; font-weight:700; color:var(--gold);">Rs.0.00</span>
+        </div>
+
+        <button type="button" id="btn-confirm" class="btn btn-primary btn-lg" disabled>Confirm &amp; Pay →</button>
+      </aside>
+    </div>
+  </main>
+
+  <dialog id="ticket-dialog" closedby="any" aria-labelledby="ticket-dlg-title">
+    <div class="dialog-header">
+      <h1 id="ticket-dlg-title">Booking Confirmed</h1>
+      <button type="button" class="btn btn-sm" id="close-ticket-dlg">Close</button>
+    </div>
+    <div id="ticket-body" style="display:flex; flex-direction:column; gap:0.65rem; font-size:0.92rem;"></div>
+    <div style="display:flex; gap:0.65rem; justify-content:flex-end; margin-block-start:1.25rem; flex-wrap:wrap;">
+      <a id="download-ticket-link" class="btn btn-sm" href="#">Download .txt</a>
+      <a href="/my-bookings.html" class="btn btn-primary btn-sm">My Tickets →</a>
+    </div>
+  </dialog>
+
+  <footer>
+    <div class="container">&copy; 2026 CINEPHILE</div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const showId = new URLSearchParams(window.location.search).get('showId');
+    if (!showId) window.location.href = '/index.html';
+
+    const selected = new Map();
+
+    async function initSeats() {
+      try {
+        const showRes = await apiRequest(`/api/shows/${showId}`);
+        const s = showRes.data[0];
+        document.getElementById('show-title').textContent = s.movieTitle;
+        document.getElementById('show-venue').textContent = `${s.theatreName} (${s.theatreCity}) • ${s.screenName}`;
+        document.getElementById('show-time-chip').textContent = `${formatTime12(s.showTime)} • ${formatDateFriendly(s.showDate)}`;
+        await loadSeatGrid();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function loadSeatGrid() {
+      const grid = document.getElementById('seat-grid');
+      const res = await apiRequest(`/api/shows/${showId}/seats`);
+      const seats = res.data;
+      const byRow = new Map();
+      seats.forEach(seat => {
+        if (!byRow.has(seat.rowNum)) byRow.set(seat.rowNum, []);
+        byRow.get(seat.rowNum).push(seat);
+      });
+
+      grid.innerHTML = '';
+      [...byRow.keys()].sort((a, b) => a - b).forEach(r => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'seat-row';
+        const rowChar = String.fromCharCode(64 + r);
+        const lbl = document.createElement('span');
+        lbl.className = 'row-label';
+        lbl.textContent = rowChar;
+        rowEl.appendChild(lbl);
+
+        byRow.get(r).sort((a, b) => a.colNum - b.colNum).forEach(seat => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          const tier = seat.seatType.toLowerCase();
+          btn.className = `seat-btn ${tier} ${seat.booked ? 'booked' : ''} ${selected.has(seat.seatId) ? 'selected' : ''}`;
+          btn.textContent = seat.colNum;
+          btn.title = seat.booked
+            ? `${seat.label} (Booked)`
+            : `${seat.label} (${seat.seatType} — Rs.${Number(seat.price).toFixed(2)})`;
+          btn.disabled = seat.booked;
+
+          if (!seat.booked) {
+            btn.addEventListener('click', () => {
+              if (selected.has(seat.seatId)) {
+                selected.delete(seat.seatId);
+                btn.classList.remove('selected');
+              } else {
+                selected.set(seat.seatId, seat);
+                btn.classList.add('selected');
+              }
+              updateSummary();
+            });
+          }
+          rowEl.appendChild(btn);
+        });
+        grid.appendChild(rowEl);
+      });
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const box = document.getElementById('selected-seats-box');
+      const totalEl = document.getElementById('total-amount');
+      const btn = document.getElementById('btn-confirm');
+
+      if (selected.size === 0) {
+        box.innerHTML = '<span style="color:var(--dim); font-size:0.85rem;">Click seats on the grid</span>';
+        totalEl.textContent = 'Rs.0.00';
+        btn.disabled = true;
+        return;
+      }
+
+      let total = 0;
+      const chips = [];
+      for (const s of selected.values()) {
+        total += Number(s.price);
+        chips.push(`<span class="chip gold">${esc(s.label)} &bull; Rs.${Number(s.price).toFixed(0)}</span>`);
+      }
+      box.innerHTML = chips.join('');
+      totalEl.textContent = `Rs.${total.toFixed(2)}`;
+      btn.disabled = false;
+    }
+
+    document.getElementById('btn-confirm').addEventListener('click', async () => {
+      const session = getSession();
+      if (!session || session.role !== 'CUSTOMER') {
+        showToast('Please sign in to book seats.', 'error');
+        setTimeout(() => {
+          window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }, 650);
+        return;
+      }
+
+      const btn = document.getElementById('btn-confirm');
+      btn.disabled = true;
+      btn.textContent = 'Confirming...';
+
+      try {
+        const res = await apiRequest('/api/bookings', {
+          method: 'POST',
+          body: JSON.stringify({
+            showId: Number(showId),
+            seatIds: [...selected.keys()],
+            paymentMethod: document.getElementById('payment-method').value
+          })
+        });
+        selected.clear();
+        await loadSeatGrid();
+        showTicketDialog(res.data);
+      } catch (err) {
+        showToast(err.message, 'error');
+        await loadSeatGrid();
+      } finally {
+        btn.textContent = 'Confirm & Pay →';
+        updateSummary();
+      }
+    });
+
+    function showTicketDialog(b) {
+      document.getElementById('ticket-body').innerHTML = `
+        <div class="editorial-panel" style="padding:1rem; border-color:var(--gold);">
+          <div class="poster-specs">Booking Reference</div>
+          <div style="font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--gold);">${esc(b.bookingRef)}</div>
+        </div>
+        <div><span class="poster-specs">Movie:</span> ${esc(b.movieTitle)}</div>
+        <div><span class="poster-specs">Theatre:</span> ${esc(b.theatreName)} (${esc(b.screenName)})</div>
+        <div><span class="poster-specs">Showtime:</span> ${esc(formatTime12(b.showTime))} &bull; ${esc(formatDateFriendly(b.showDate))}</div>
+        <div><span class="poster-specs">Seats:</span> ${esc((b.seats || []).join(', '))}</div>
+        <div><span class="poster-specs">Payment:</span> ${esc(b.paymentMethod)} (${esc(b.paymentStatus)}) &bull; Rs.${Number(b.totalAmount).toFixed(2)}</div>
+      `;
+      const dl = document.getElementById('download-ticket-link');
+      dl.onclick = async (e) => {
+        e.preventDefault();
+        const session = getSession();
+        const r = await fetch(`/api/bookings/${b.bookingId}/ticket`, {
+          headers: { Authorization: `Bearer ${session.token}` }
+        });
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Ticket_${b.bookingRef}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      document.getElementById('ticket-dialog').showModal();
+    }
+
+    document.getElementById('close-ticket-dlg').addEventListener('click', () => {
+      document.getElementById('ticket-dialog').close();
+    });
+
+    initSeats();
+  </script>
+</body>
+</html>

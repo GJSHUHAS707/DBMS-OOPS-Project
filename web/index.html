@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>CINEPHILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="navbar navbar--overlay">
+    <div class="container nav-content">
+      <a href="/index.html" class="brand-mark">
+        <span class="brand-word">Cinephile</span>
+      </a>
+      <div id="nav-actions" class="nav-actions"></div>
+    </div>
+  </header>
+
+  <!-- Full-Bleed High-Res Movie Slideshow Hero -->
+  <section id="cinema-hero" class="cinema-hero">
+    <div class="hero-media">
+      <img id="hero-backdrop-a" class="hero-backdrop is-active ken-in" src="/assets/inception-backdrop.jpg" alt="" fetchpriority="high">
+      <img id="hero-backdrop-b" class="hero-backdrop" src="/assets/interstellar-backdrop.jpg" alt="">
+      <div class="hero-scrim"></div>
+    </div>
+
+    <div class="container hero-content">
+      <div id="hero-spotlight" class="hero-spotlight" title="Click to view Now Showing">
+        <div id="hero-genre" class="hero-kicker">SCI-FI</div>
+        <h1 id="hero-title" class="hero-serif-title">Inception</h1>
+        <p id="hero-synopsis" class="hero-synopsis">
+          A skilled thief who extracts secrets from within the subconscious is given a final chance at redemption through inception.
+        </p>
+      </div>
+
+      <div class="billing-block" style="justify-content:flex-end;">
+        <a href="#now-showing" class="scroll-cue">SCROLL FOR SHOWTIMES ↓</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Now Showing Section -->
+  <main id="now-showing" class="container programme-section">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">THEATRICAL ENGAGEMENTS</div>
+        <h2 class="section-title">Now Showing</h2>
+      </div>
+      <div id="programme-count" class="poster-specs"></div>
+    </div>
+
+    <div class="filters-strip">
+      <div style="flex:1; min-inline-size:13rem;">
+        <input type="search" id="search-input" class="form-control" placeholder="Search film title..." aria-label="Search movies">
+      </div>
+      <div style="min-inline-size:10rem;">
+        <select id="language-select" class="form-control" aria-label="Filter by language">
+          <option value="All Languages">All Languages</option>
+        </select>
+      </div>
+      <div id="genre-pills" class="genre-pills">
+        <button type="button" class="genre-pill active" data-genre="All Genres">All Genres</button>
+      </div>
+    </div>
+
+    <div id="movies-grid" class="programme-grid">
+      <p style="color:var(--stone);">Loading movies...</p>
+    </div>
+  </main>
+
+  <!-- Showtimes Modal -->
+  <dialog id="showtimes-dialog" closedby="any" aria-labelledby="show-dlg-title">
+    <div class="dialog-header">
+      <h1 id="show-dlg-title">Showtimes</h1>
+      <button type="button" class="btn btn-sm" id="close-showtimes-dlg">Close</button>
+    </div>
+    <p id="show-dlg-meta" class="poster-specs" style="margin-block-end:1rem;"></p>
+    <div id="showtimes-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+  </dialog>
+
+  <footer>
+    <div class="container">&copy; 2026 CINEPHILE</div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let allMovies = [];
+    let selectedGenre = 'All Genres';
+    let spotlightIndex = 0;
+    let reelTimer = null;
+
+    const MOVIE_ASSETS = {
+      'inception': {
+        backdrop: '/assets/inception-backdrop.jpg',
+        poster: '/assets/inception-poster.jpg'
+      },
+      'interstellar': {
+        backdrop: '/assets/interstellar-backdrop.jpg',
+        poster: '/assets/interstellar-poster.jpg'
+      },
+      'the dark knight': {
+        backdrop: '/assets/dark-knight-backdrop.jpg',
+        poster: '/assets/dark-knight-poster.jpg'
+      },
+      'leo': {
+        backdrop: '/assets/leo-backdrop.jpg',
+        poster: '/assets/leo-poster.jpg'
+      }
+    };
+
+    function getMovieAssets(title) {
+      const key = String(title || '').trim().toLowerCase();
+      if (MOVIE_ASSETS[key]) return MOVIE_ASSETS[key];
+      const match = Object.keys(MOVIE_ASSETS).find(k => key.includes(k));
+      return match ? MOVIE_ASSETS[match] : {
+        backdrop: '/assets/trailer-poster.jpg',
+        poster: '/assets/trailer-poster.jpg'
+      };
+    }
+
+    let activeBackdropSlot = 0;
+
+    document.getElementById('hero-spotlight').addEventListener('click', () => {
+      document.getElementById('now-showing').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    async function loadMovies() {
+      const grid = document.getElementById('movies-grid');
+      try {
+        const res = await apiRequest('/api/movies');
+        allMovies = res.data;
+        populateFilters(allMovies);
+        renderMovies();
+        setupHeroSlideshow(allMovies);
+      } catch (err) {
+        grid.innerHTML = `<p style="color:var(--stone);">Unable to load movies right now. Please try again shortly.</p>`;
+      }
+    }
+
+    function setupHeroSlideshow(movies) {
+      if (!movies.length) return;
+      applyHeroSpotlight(movies[0], 0);
+      if (reelTimer) clearInterval(reelTimer);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || movies.length <= 1) return;
+      reelTimer = setInterval(() => {
+        spotlightIndex = (spotlightIndex + 1) % movies.length;
+        applyHeroSpotlight(movies[spotlightIndex], spotlightIndex);
+      }, 5500);
+    }
+
+    function applyHeroSpotlight(movie, idx) {
+      const assets = getMovieAssets(movie.title);
+      const slotA = document.getElementById('hero-backdrop-a');
+      const slotB = document.getElementById('hero-backdrop-b');
+      const incoming = activeBackdropSlot === 0 ? slotA : slotB;
+      const outgoing = activeBackdropSlot === 0 ? slotB : slotA;
+
+      incoming.classList.remove('ken-in', 'ken-out');
+      void incoming.offsetWidth;
+      incoming.src = assets.backdrop;
+      incoming.alt = movie.title;
+      incoming.classList.add(idx % 2 === 0 ? 'ken-in' : 'ken-out', 'is-active');
+      outgoing.classList.remove('is-active');
+      activeBackdropSlot = activeBackdropSlot === 0 ? 1 : 0;
+
+      document.getElementById('hero-genre').textContent = movie.genre.toUpperCase();
+      document.getElementById('hero-title').textContent = movie.title;
+      document.getElementById('hero-synopsis').textContent = movie.description;
+    }
+
+    function populateFilters(movies) {
+      const langs = [...new Set(movies.map(m => m.language))].sort();
+      document.getElementById('language-select').innerHTML =
+        '<option value="All Languages">All Languages</option>' +
+        langs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+
+      const genres = ['All Genres', ...new Set(movies.map(m => m.genre))];
+      const pills = document.getElementById('genre-pills');
+      pills.innerHTML = genres.map(g =>
+        `<button type="button" class="genre-pill ${g === selectedGenre ? 'active' : ''}" data-genre="${esc(g)}">${esc(g)}</button>`
+      ).join('');
+
+      pills.querySelectorAll('.genre-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedGenre = btn.dataset.genre;
+          pills.querySelectorAll('.genre-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderMovies();
+        });
+      });
+    }
+
+    function renderMovies() {
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+      const lang = document.getElementById('language-select').value;
+      const list = allMovies.filter(m =>
+        (!q || m.title.toLowerCase().includes(q)) &&
+        (selectedGenre === 'All Genres' || m.genre === selectedGenre) &&
+        (lang === 'All Languages' || m.language === lang)
+      );
+
+      document.getElementById('programme-count').textContent = `${list.length} MOVIE(S)`;
+      const grid = document.getElementById('movies-grid');
+      if (!list.length) {
+        grid.innerHTML = '<p style="color:var(--stone);">No movies match your search.</p>';
+        return;
+      }
+
+      grid.innerHTML = list.map((m) => {
+        const assets = getMovieAssets(m.title);
+        return `
+        <article class="film-poster-card">
+          <div class="poster-media">
+            <img class="poster-img" src="${assets.poster}" alt="${esc(m.title)} movie poster" loading="lazy" onerror="this.onerror=null;this.src='/assets/trailer-poster.jpg';">
+          </div>
+          <div class="poster-meta">
+            <div><span class="chip gold">${esc(m.genre)}</span></div>
+            <h3 class="poster-card-title">${esc(m.title)}</h3>
+            <div class="poster-specs">${esc(m.language)} &bull; ${m.durationMinutes} min</div>
+            <p class="poster-desc">${esc(m.description)}</p>
+            <button type="button" class="btn btn-primary" onclick="openShowtimes(${m.movieId})">
+              View Showtimes →
+            </button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    async function openShowtimes(movieId) {
+      const movie = allMovies.find(m => m.movieId === movieId);
+      const dlg = document.getElementById('showtimes-dialog');
+      document.getElementById('show-dlg-title').textContent = movie ? movie.title : 'Showtimes';
+      document.getElementById('show-dlg-meta').textContent = movie
+        ? `${movie.genre} • ${movie.language} • ${movie.durationMinutes} min`
+        : '';
+      const listEl = document.getElementById('showtimes-list');
+      listEl.innerHTML = '<p style="color:var(--stone);">Loading showtimes...</p>';
+      dlg.showModal();
+
+      try {
+        const res = await apiRequest(`/api/shows?movieId=${movieId}`);
+        const shows = res.data;
+        if (!shows.length) {
+          listEl.innerHTML = '<p style="color:var(--stone);">No upcoming shows scheduled for this movie.</p>';
+          return;
+        }
+        listEl.innerHTML = shows.map(s => `
+          <div class="editorial-panel" style="padding:1rem; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:600; color:var(--ivory);">${esc(s.theatreName)} (${esc(s.theatreCity)})</div>
+              <div class="poster-specs" style="margin-block-start:0.25rem; color:var(--ivory);">
+                ${esc(formatTime12(s.showTime))} &bull; ${esc(s.screenName)} &bull; ${esc(formatDateFriendly(s.showDate))}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.65rem;">
+              <span class="chip ${s.availableSeats > 0 ? 'green' : 'red'}">${s.availableSeats} seats left</span>
+              <a href="/seat-selection.html?showId=${s.showId}" class="btn btn-primary btn-sm">Pick Seats →</a>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        listEl.innerHTML = `<p style="color:#fda4af;">${esc(err.message)}</p>`;
+      }
+    }
+
+    document.getElementById('search-input').addEventListener('input', renderMovies);
+    document.getElementById('language-select').addEventListener('change', renderMovies);
+    document.getElementById('close-showtimes-dlg').addEventListener('click', () => {
+      document.getElementById('showtimes-dialog').close();
+    });
+
+    loadMovies();
+  </script>
+</body>
+</html>

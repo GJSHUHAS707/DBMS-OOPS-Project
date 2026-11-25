@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Sign In — CINEPHILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="/index.html" class="brand-mark">
+        <span class="brand-word">Cinephile</span>
+      </a>
+      <div id="nav-actions" class="nav-actions"></div>
+    </div>
+  </header>
+
+  <main class="container page-shell" style="display:grid; place-items:center;">
+    <div class="editorial-panel" style="inline-size:100%; max-inline-size:29rem;">
+      <h1 style="font-family:var(--font-serif); font-size:2.4rem; font-style:italic; margin-block-end:1.1rem;">Welcome Back</h1>
+
+      <div class="tab-bar">
+        <button type="button" class="tab-btn active" id="tab-signin">Sign In</button>
+        <button type="button" class="tab-btn" id="tab-register">Create Account</button>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-role">Account Type</label>
+          <select id="login-role" class="form-control">
+            <option value="Customer">Customer</option>
+            <option value="Admin">Administrator</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" class="form-control" placeholder="aravind@cinephile.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" class="form-control" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
+
+        <div class="ticket-stub-divider"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem;">
+          <button type="button" class="btn btn-sm" id="btn-demo-cust">Demo Customer</button>
+          <button type="button" class="btn btn-sm" id="btn-demo-admin">Demo Admin</button>
+        </div>
+      </form>
+
+      <form id="register-form" style="display:none;">
+        <div class="form-group">
+          <label for="reg-name">Full Name</label>
+          <input id="reg-name" class="form-control" placeholder="Siddhaarth B" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" class="form-control" placeholder="you@cinephile.com" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-phone">Phone</label>
+          <input id="reg-phone" class="form-control" placeholder="9876543210">
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" class="form-control" placeholder="Choose a password" required>
+        </div>
+        <button type="submit" class="btn btn-gold btn-lg">Create Account</button>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">&copy; 2026 CINEPHILE</div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const loginForm = document.getElementById('login-form');
+    const regForm = document.getElementById('register-form');
+    const tabSignin = document.getElementById('tab-signin');
+    const tabRegister = document.getElementById('tab-register');
+
+    tabSignin.addEventListener('click', () => {
+      tabSignin.classList.add('active');
+      tabRegister.classList.remove('active');
+      loginForm.style.display = 'block';
+      regForm.style.display = 'none';
+    });
+
+    tabRegister.addEventListener('click', () => {
+      tabRegister.classList.add('active');
+      tabSignin.classList.remove('active');
+      loginForm.style.display = 'none';
+      regForm.style.display = 'block';
+    });
+
+    document.getElementById('btn-demo-cust').addEventListener('click', () => {
+      document.getElementById('login-role').value = 'Customer';
+      document.getElementById('login-email').value = 'aravind@cinephile.com';
+      document.getElementById('login-password').value = 'user123';
+    });
+
+    document.getElementById('btn-demo-admin').addEventListener('click', () => {
+      document.getElementById('login-role').value = 'Admin';
+      document.getElementById('login-email').value = 'admin@cinephile.com';
+      document.getElementById('login-password').value = 'admin123';
+    });
+
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            role: document.getElementById('login-role').value,
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value
+          })
+        });
+        setSession(res.data);
+        showToast('Welcome, ' + res.data.name);
+        const dest = redirect || (res.data.role === 'ADMIN' ? '/admin.html' : '/index.html');
+        setTimeout(() => { window.location.href = dest; }, 450);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await apiRequest('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('reg-name').value,
+            email: document.getElementById('reg-email').value,
+            phone: document.getElementById('reg-phone').value,
+            password: document.getElementById('reg-password').value
+          })
+        });
+        setSession(res.data);
+        showToast('Account created');
+        setTimeout(() => { window.location.href = redirect || '/index.html'; }, 450);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

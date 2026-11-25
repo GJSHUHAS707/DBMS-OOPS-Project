@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>Admin — CINEPHILE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a href="/index.html" class="brand-mark">
+        <span class="brand-word">Cinephile</span>
+      </a>
+      <div id="nav-actions" class="nav-actions"></div>
+    </div>
+  </header>
+
+  <main class="container page-shell">
+    <div class="section-head">
+      <div>
+        <div class="section-kicker">MANAGEMENT CONSOLE</div>
+        <h1 class="section-title">Cinema Operations</h1>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Confirmed Revenue</div><div id="st-rev" class="stat-val" style="color:var(--gold);">Rs.0.00</div></div>
+      <div class="stat-card"><div class="stat-label">Total Bookings</div><div id="st-book" class="stat-val">0</div></div>
+      <div class="stat-card"><div class="stat-label">Movies</div><div id="st-mov" class="stat-val">0</div></div>
+      <div class="stat-card"><div class="stat-label">Scheduled Shows</div><div id="st-show" class="stat-val">0</div></div>
+    </div>
+
+    <div class="tab-bar">
+      <button type="button" class="tab-btn active" data-tab="panel-movies">Movies</button>
+      <button type="button" class="tab-btn" data-tab="panel-venues">Theatres, Screens &amp; Shows</button>
+      <button type="button" class="tab-btn" data-tab="panel-reports">Bookings &amp; Reports</button>
+      <button type="button" class="tab-btn" data-tab="panel-audit">Audit Log</button>
+    </div>
+
+    <section id="panel-movies" class="admin-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-block-end:0.85rem;">
+        <h2 id="movies-tbl-cap" style="font-family:var(--font-serif); font-size:1.5rem;">Movies</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('dlg-movie').showModal()">+ Add Movie</button>
+      </div>
+      <div tabindex="0" role="region" aria-labelledby="movies-tbl-cap" class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Title</th><th>Genre</th><th>Language</th><th>Duration</th><th>Action</th></tr></thead>
+          <tbody id="adm-movies-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-venues" class="admin-panel" style="display:none;">
+      <div style="display:flex; gap:0.65rem; flex-wrap:wrap; margin-block-end:1rem;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('dlg-theatre').showModal()">+ Add Theatre</button>
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('dlg-screen').showModal()">+ Add Screen</button>
+        <button type="button" class="btn btn-gold btn-sm" onclick="document.getElementById('dlg-show').showModal()">+ Schedule Show</button>
+      </div>
+      <h2 id="shows-tbl-cap" style="font-family:var(--font-serif); font-size:1.5rem; margin-block-end:0.65rem;">Scheduled Shows</h2>
+      <div tabindex="0" role="region" aria-labelledby="shows-tbl-cap" class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Movie</th><th>Theatre</th><th>Screen</th><th>Time</th><th>Date</th><th>Seats Left</th></tr></thead>
+          <tbody id="adm-shows-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-reports" class="admin-panel" style="display:none;">
+      <h2 id="rep-tbl-cap" style="font-family:var(--font-serif); font-size:1.5rem; margin-block-end:0.65rem;">Movie Revenue Summary (Stored Procedure)</h2>
+      <div style="display:flex; gap:0.65rem; align-items:center; margin-block-end:1rem; flex-wrap:wrap;">
+        <select id="sp-movie-select" class="form-control" style="max-inline-size:16rem;"></select>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-call-sp-out">Check Movie Revenue</button>
+        <span id="sp-out-result" class="poster-specs" style="color:var(--emerald);"></span>
+      </div>
+      <div tabindex="0" role="region" aria-labelledby="rep-tbl-cap" class="table-wrapper" style="margin-block-end:1.75rem;">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Movie</th><th>Genre</th><th>Confirmed Bookings</th><th>Tickets Sold</th><th>Revenue (Rs.)</th></tr></thead>
+          <tbody id="adm-reports-tbody"></tbody>
+        </table>
+      </div>
+
+      <h2 id="allb-tbl-cap" style="font-family:var(--font-serif); font-size:1.5rem; margin-block-end:0.65rem;">All Bookings</h2>
+      <div tabindex="0" role="region" aria-labelledby="allb-tbl-cap" class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Ref</th><th>Customer</th><th>Movie</th><th>Theatre</th><th>Showtime</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="adm-bookings-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-audit" class="admin-panel" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-block-end:0.75rem;">
+        <h2 id="audit-tbl-cap" style="font-family:var(--font-serif); font-size:1.5rem;">Booking Audit Log (MySQL Triggers)</h2>
+        <button type="button" class="btn btn-sm" onclick="loadAdminAll()">Refresh</button>
+      </div>
+      <div tabindex="0" role="region" aria-labelledby="audit-tbl-cap" class="table-wrapper">
+        <table class="data-table">
+          <thead><tr><th>Audit ID</th><th>Booking ID</th><th>Action</th><th>Old Status</th><th>New Status</th><th>Details</th><th>Timestamp</th></tr></thead>
+          <tbody id="adm-audit-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="dlg-movie" closedby="any" aria-labelledby="dlg-mov-h">
+    <div class="dialog-header"><h1 id="dlg-mov-h">Add Movie</h1></div>
+    <form id="form-add-movie">
+      <div class="form-group"><label>Title</label><input id="m-title" class="form-control" required></div>
+      <div class="form-group"><label>Genre</label><input id="m-genre" class="form-control" required placeholder="Sci-Fi"></div>
+      <div class="form-group"><label>Language</label><input id="m-lang" class="form-control" value="English" required></div>
+      <div class="form-group"><label>Duration (minutes)</label><input id="m-dur" type="number" class="form-control" value="145" required></div>
+      <div class="form-group"><label>Release Date</label><input id="m-date" type="date" class="form-control" required></div>
+      <div class="form-group"><label>Synopsis</label><textarea id="m-desc" class="form-control" rows="2"></textarea></div>
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('dlg-movie').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save Movie</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-theatre" closedby="any" aria-labelledby="dlg-th-h">
+    <div class="dialog-header"><h1 id="dlg-th-h">Add Theatre</h1></div>
+    <form id="form-add-theatre">
+      <div class="form-group"><label>Theatre Name</label><input id="t-name" class="form-control" required></div>
+      <div class="form-group"><label>City</label><input id="t-city" class="form-control" value="Chennai" required></div>
+      <div class="form-group"><label>Address</label><input id="t-addr" class="form-control" required></div>
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('dlg-theatre').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Create Theatre</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-screen" closedby="any" aria-labelledby="dlg-sc-h">
+    <div class="dialog-header"><h1 id="dlg-sc-h">Add Screen</h1></div>
+    <form id="form-add-screen">
+      <div class="form-group"><label>Theatre</label><select id="sc-theatre" class="form-control" required></select></div>
+      <div class="form-group"><label>Screen Name</label><input id="sc-name" class="form-control" required placeholder="Screen 3 (IMAX)"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem;">
+        <div class="form-group"><label>Rows</label><input id="sc-rows" type="number" class="form-control" value="5" min="1" max="15" required></div>
+        <div class="form-group"><label>Columns</label><input id="sc-cols" type="number" class="form-control" value="8" min="1" max="20" required></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('dlg-screen').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Create Screen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-show" closedby="any" aria-labelledby="dlg-sh-h">
+    <div class="dialog-header"><h1 id="dlg-sh-h">Schedule Show</h1></div>
+    <form id="form-add-show">
+      <div class="form-group"><label>Movie</label><select id="sh-movie" class="form-control" required></select></div>
+      <div class="form-group"><label>Screen</label><select id="sh-screen" class="form-control" required></select></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.65rem;">
+        <div class="form-group"><label>Date</label><input id="sh-date" type="date" class="form-control" required></div>
+        <div class="form-group"><label>Time</label><input id="sh-time" type="time" class="form-control" value="19:30" required></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('dlg-show').close()">Cancel</button>
+        <button type="submit" class="btn btn-gold btn-sm">Schedule Show</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer>
+    <div class="container">&copy; 2026 CINEPHILE</div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.admin-panel').forEach(p => p.style.display = 'none');
+        document.getElementById(btn.dataset.tab).style.display = 'block';
+      });
+    });
+
+    async function loadAdminAll() {
+      const session = getSession();
+      if (!session || session.role !== 'ADMIN') {
+        window.location.href = '/login.html?redirect=/admin.html';
+        return;
+      }
+
+      try {
+        const [ovRes, repRes, audRes] = await Promise.all([
+          apiRequest('/api/admin/overview'),
+          apiRequest('/api/admin/reports'),
+          apiRequest('/api/admin/audit-logs')
+        ]);
+        const ov = ovRes.data;
+        const confirmedRev = ov.bookings
+          .filter(b => b.bookingStatus === 'CONFIRMED')
+          .reduce((sum, b) => sum + Number(b.totalAmount), 0);
+
+        document.getElementById('st-rev').textContent = `Rs.${confirmedRev.toFixed(2)}`;
+        document.getElementById('st-book').textContent = ov.bookings.length;
+        document.getElementById('st-mov').textContent = ov.movies.length;
+        document.getElementById('st-show').textContent = ov.shows.length;
+
+        document.getElementById('adm-movies-tbody').innerHTML = ov.movies.map(m => `
+          <tr>
+            <td data-label="ID">#${m.movieId}</td>
+            <th data-label="Title"><b>${esc(m.title)}</b></th>
+            <td data-label="Genre">${esc(m.genre)}</td>
+            <td data-label="Language">${esc(m.language)}</td>
+            <td data-label="Duration">${m.durationMinutes} min</td>
+            <td data-label="Action"><button type="button" class="btn btn-danger btn-sm" onclick="deleteMovie(${m.movieId})">Delete</button></td>
+          </tr>
+        `).join('');
+
+        const movOpts = ov.movies.map(m => `<option value="${m.movieId}">${esc(m.title)}</option>`).join('');
+        document.getElementById('sh-movie').innerHTML = movOpts;
+        document.getElementById('sp-movie-select').innerHTML = movOpts;
+        document.getElementById('sc-theatre').innerHTML = ov.theatres.map(t => `<option value="${t.theatreId}">${esc(t.name)} (${esc(t.city)})</option>`).join('');
+        document.getElementById('sh-screen').innerHTML = ov.screens.map(s => `<option value="${s.screenId}">${esc(s.theatreName)} — ${esc(s.name)}</option>`).join('');
+
+        document.getElementById('adm-shows-tbody').innerHTML = ov.shows.map(s => `
+          <tr>
+            <td data-label="ID">#${s.showId}</td>
+            <th data-label="Movie">${esc(s.movieTitle)}</th>
+            <td data-label="Theatre">${esc(s.theatreName)}</td>
+            <td data-label="Screen">${esc(s.screenName)}</td>
+            <td data-label="Time">${esc(formatTime12(s.showTime))}</td>
+            <td data-label="Date">${esc(formatDateFriendly(s.showDate))}</td>
+            <td data-label="Seats Left"><span class="chip green">${s.availableSeats}</span></td>
+          </tr>
+        `).join('');
+
+        document.getElementById('adm-reports-tbody').innerHTML = repRes.data.map(r => `
+          <tr>
+            <td data-label="ID">#${r.movieId}</td>
+            <th data-label="Movie">${esc(r.title)}</th>
+            <td data-label="Genre">${esc(r.genre)}</td>
+            <td data-label="Confirmed">${r.confirmedBookings}</td>
+            <td data-label="Tickets">${r.ticketsSold}</td>
+            <td data-label="Revenue" style="color:var(--gold);"><b>Rs.${Number(r.ticketRevenue).toFixed(2)}</b></td>
+          </tr>
+        `).join('');
+
+        document.getElementById('adm-bookings-tbody').innerHTML = ov.bookings.map(b => `
+          <tr>
+            <th data-label="Ref" style="font-family:var(--font-mono); color:var(--gold);">${esc(b.bookingRef)}</th>
+            <td data-label="Customer">${esc(b.customerName)}</td>
+            <td data-label="Movie">${esc(b.movieTitle)}</td>
+            <td data-label="Theatre">${esc(b.theatreName)}</td>
+            <td data-label="Showtime">${esc(formatTime12(b.showTime))} &bull; ${esc(formatDateFriendly(b.showDate))}</td>
+            <td data-label="Amount">Rs.${Number(b.totalAmount).toFixed(2)}</td>
+            <td data-label="Status"><span class="chip ${b.bookingStatus === 'CONFIRMED' ? 'green' : 'red'}">${esc(b.bookingStatus)}</span></td>
+            <td data-label="Action">${b.bookingStatus === 'CONFIRMED' ? `<button type="button" class="btn btn-danger btn-sm" onclick="adminCancel(${b.bookingId})">Cancel</button>` : '—'}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('adm-audit-tbody').innerHTML = audRes.data.map(a => `
+          <tr>
+            <td data-label="Audit ID">#${a.auditId}</td>
+            <td data-label="Booking ID">#${a.bookingId}</td>
+            <th data-label="Action">${esc(a.actionType)}</th>
+            <td data-label="Old Status">${esc(a.oldStatus)}</td>
+            <td data-label="New Status">${esc(a.newStatus)}</td>
+            <td data-label="Details">${esc(a.details)}</td>
+            <td data-label="Timestamp">${esc(a.loggedAt)}</td>
+          </tr>
+        `).join('');
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function deleteMovie(id) {
+      if (!confirm('Remove this movie and its scheduled shows?')) return;
+      try {
+        await apiRequest(`/api/admin/movies/${id}`, { method: 'DELETE' });
+        showToast('Movie removed');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function adminCancel(id) {
+      try {
+        await apiRequest(`/api/admin/bookings/${id}/cancel`, { method: 'POST' });
+        showToast('Booking cancelled');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    document.getElementById('btn-call-sp-out').addEventListener('click', async () => {
+      const movieId = document.getElementById('sp-movie-select').value;
+      try {
+        const res = await apiRequest(`/api/admin/reports/${movieId}`);
+        document.getElementById('sp-out-result').textContent = res.message;
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    document.getElementById('form-add-movie').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest('/api/admin/movies', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: document.getElementById('m-title').value,
+            genre: document.getElementById('m-genre').value,
+            language: document.getElementById('m-lang').value,
+            durationMinutes: document.getElementById('m-dur').value,
+            releaseDate: document.getElementById('m-date').value,
+            description: document.getElementById('m-desc').value
+          })
+        });
+        document.getElementById('dlg-movie').close();
+        showToast('Movie added');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    document.getElementById('form-add-theatre').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest('/api/admin/theatres', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('t-name').value,
+            city: document.getElementById('t-city').value,
+            address: document.getElementById('t-addr').value
+          })
+        });
+        document.getElementById('dlg-theatre').close();
+        showToast('Theatre added');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    document.getElementById('form-add-screen').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest('/api/admin/screens', {
+          method: 'POST',
+          body: JSON.stringify({
+            theatreId: document.getElementById('sc-theatre').value,
+            name: document.getElementById('sc-name').value,
+            totalRows: document.getElementById('sc-rows').value,
+            totalCols: document.getElementById('sc-cols').value
+          })
+        });
+        document.getElementById('dlg-screen').close();
+        showToast('Screen added');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    document.getElementById('form-add-show').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest('/api/admin/shows', {
+          method: 'POST',
+          body: JSON.stringify({
+            movieId: document.getElementById('sh-movie').value,
+            screenId: document.getElementById('sh-screen').value,
+            showDate: document.getElementById('sh-date').value,
+            showTime: document.getElementById('sh-time').value
+          })
+        });
+        document.getElementById('dlg-show').close();
+        showToast('Show scheduled');
+        loadAdminAll();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('m-date').value = today;
+    document.getElementById('sh-date').value = today;
+
+    loadAdminAll();
+  </script>
+</body>
+</html>

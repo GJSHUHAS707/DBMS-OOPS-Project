@@ -1,0 +1,18 @@
+# Compiled Java outputs
+out/
+*.class
+sources.txt
+
+# Local database credentials (copy from db.properties.example)
+db.properties
+
+# Generated local ticket exports
+tickets/*.txt
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+*.log
